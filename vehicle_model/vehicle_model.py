@@ -42,13 +42,13 @@ class ExactTracker(object):
         theta_s[0] = X[2]
 
         for i in range(len(ds)):
-            theta_s[i+1] = theta_s[i] + self.L * k_path[i] * ds[i]
-            x_s[i+1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
-            y_s[i+1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
+            theta_s[i + 1] = theta_s[i] + self.L * k_path[i] * ds[i]
+            x_s[i + 1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
+            y_s[i + 1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
 
         for i in range(len(ds)):
-            x_s[i+1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
-            y_s[i+1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
+            x_s[i + 1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
+            y_s[i + 1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
 
         return np.delete(np.vstack((x_s, y_s, theta_s)), 0, axis=1)
 
@@ -110,6 +110,7 @@ class VehicleModel(object):
         self.x = x_s_new[:, -1]
         self.x_s = np.hstack((self.x_s, x_s_new))
 
+
 if __name__ == '__main__':
     x = np.arange(10)
     x_dists = np.arange(10) * 0.1
@@ -123,9 +124,8 @@ if __name__ == '__main__':
     N = 50
     dist = np.pi * 2.0
     X = np.asarray([0, 0, 0])
-    # k_path = np.ones(shape=(N,), dtype=np.float64) * 1
-    k_path = np.sin(np.linspace(0,np.pi*4, num=N))
-    k_spacing = np.ones(shape=(N - 1,), dtype=np.float64) * dist / (N-1)
+    k_path = np.sin(np.linspace(0, np.pi * 4, num=N))
+    k_spacing = np.ones(shape=(N - 1,), dtype=np.float64) * dist / (N - 1)
     dist_along_path = np.cumsum(k_spacing)
     dist_along_path = np.insert(dist_along_path, 0, 0)
 
@@ -137,6 +137,7 @@ if __name__ == '__main__':
     model.simulate(k_path, k_spacing, 5.0)
 
     import matplotlib.pyplot as plt
+
     plt.ion()
 
     X_s = model.x_s
@@ -153,4 +154,3 @@ if __name__ == '__main__':
     plt.xlabel('Distance')
     plt.ylabel('Curvature')
     plt.show()
-
