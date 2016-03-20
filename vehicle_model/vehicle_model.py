@@ -50,7 +50,7 @@ class ExactTracker(object):
             x_s[i+1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
             y_s[i+1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
 
-        return x_s, y_s, theta_s
+        return np.vstack((x_s, y_s, theta_s))
 
 
 class VehicleModel(object):
@@ -65,9 +65,13 @@ class VehicleModel(object):
         self.vel = 1.0
 
         self.x = x0
+        self.x_s = np.zeros(shape=(3, 1))
+        self.x_s[:, 0] = self.x
 
         if model_type == VehicleModel.EXACT:
             self.model = ExactTracker(L)
+        else:
+            raise RuntimeError("Passed a model type not recognized")
 
     def simulate(self, k_path, k_spacing, time):
         assert type(k_path) == np.ndarray
@@ -77,7 +81,7 @@ class VehicleModel(object):
 
         dist_to_simulate = self.vel * time
         dist_along_path = np.cumsum(k_spacing)
-        np.insert(dist_along_path, 0, 0)
+        dist_along_path = np.insert(dist_along_path, 0, 0)
 
         assert dist_along_path.shape == k_path.shape
 
@@ -101,8 +105,8 @@ class VehicleModel(object):
 
         v_path = np.ones(k_path_trunc.shape) * self.vel
 
-        self.x = self.model.simulate(self.x, k_path_trunc, dist_along_path_trunc, v_path, time)
-
+        x_s_new = self.model.simulate(self.x, k_path_trunc, dist_along_path_trunc, v_path, time)
+        self.x_s = np.hstack((self.x_s, x_s_new))
 
 if __name__ == '__main__':
     x = np.arange(10)
@@ -124,14 +128,41 @@ if __name__ == '__main__':
     dist_along_path = np.insert(dist_along_path, 0, 0)
 
     tracker = ExactTracker(1.0)
-    x_s, y_s, theta_s = tracker.simulate(X, k_path, dist_along_path, None, None)
+    X_s = tracker.simulate(X, k_path, dist_along_path, None, None)
 
     import matplotlib.pyplot as plt
+    plt.ion()
 
     plt.figure(figsize=(16, 16))
-    plt.plot(x_s, y_s)
+    plt.plot(X_s[0, :], X_s[1, :])
     plt.title('Path plot of curvature function')
     plt.xlabel('x')
     plt.ylabel('y')
+    plt.show()
+
+    plt.figure(figsize=(16, 16))
+    plt.plot(dist_along_path, k_path)
+    plt.title('Curvature command')
+    plt.xlabel('Distance')
+    plt.ylabel('Curvature')
+    plt.show()
+
+    model = VehicleModel(X, 1.0, VehicleModel.EXACT)
+
+    model.simulate(k_path, k_spacing, 5.0)
+
+    X_s = model.x_s
+    plt.figure(figsize=(16, 16))
+    plt.plot(X_s[0, :], X_s[1, :])
+    plt.title('Path plot of curvature function')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
+
+    plt.figure(figsize=(16, 16))
+    plt.plot(dist_along_path, k_path)
+    plt.title('Curvature command')
+    plt.xlabel('Distance')
+    plt.ylabel('Curvature')
     plt.show()
 
