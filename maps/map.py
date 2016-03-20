@@ -9,8 +9,7 @@ import matplotlib as mpl
 
 def load_map(file_location):
     """
-    Loads the map file from the specified location. Returns a theano shared variable
-
+    Loads the map file from the specified location. Returns a numpy array
     :type file_location: str
     :param file_location: The location of the map file. Loads a png grayscale file.
 
@@ -46,9 +45,6 @@ class Point:
             self.x, self.y = args[0]
         else:
             self.x, self.y = args
-
-    # def __eq__(self, other):
-    #     return other[0] is self.x and other[1] is self.y
 
     def __getitem__(self, index):
         retval = None
@@ -250,7 +246,7 @@ if __name__ == '__main__':
     m = MAP2D(window_y=window_size, window_x=window_size)
     m.load_map(file_location)
 
-    w = m.get_window(200, 200)
+    w = m.get_window(250, 250)
     m.show_window(w)
 
     p1 = Point(200, 250)
