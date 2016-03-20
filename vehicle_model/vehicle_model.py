@@ -50,7 +50,7 @@ class ExactTracker(object):
             x_s[i+1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
             y_s[i+1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
 
-        return np.vstack((x_s, y_s, theta_s))
+        return np.delete(np.vstack((x_s, y_s, theta_s)), 0, axis=1)
 
 
 class VehicleModel(object):
@@ -106,6 +106,8 @@ class VehicleModel(object):
         v_path = np.ones(k_path_trunc.shape) * self.vel
 
         x_s_new = self.model.simulate(self.x, k_path_trunc, dist_along_path_trunc, v_path, time)
+
+        self.x = x_s_new[:, -1]
         self.x_s = np.hstack((self.x_s, x_s_new))
 
 if __name__ == '__main__':
@@ -127,29 +129,15 @@ if __name__ == '__main__':
     dist_along_path = np.cumsum(k_spacing)
     dist_along_path = np.insert(dist_along_path, 0, 0)
 
-    tracker = ExactTracker(1.0)
-    X_s = tracker.simulate(X, k_path, dist_along_path, None, None)
-
-    import matplotlib.pyplot as plt
-    plt.ion()
-
-    plt.figure(figsize=(16, 16))
-    plt.plot(X_s[0, :], X_s[1, :])
-    plt.title('Path plot of curvature function')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.show()
-
-    plt.figure(figsize=(16, 16))
-    plt.plot(dist_along_path, k_path)
-    plt.title('Curvature command')
-    plt.xlabel('Distance')
-    plt.ylabel('Curvature')
-    plt.show()
+    # tracker = ExactTracker(1.0)
+    # X_s = tracker.simulate(X, k_path, dist_along_path, None, None)
 
     model = VehicleModel(X, 1.0, VehicleModel.EXACT)
 
     model.simulate(k_path, k_spacing, 5.0)
+
+    import matplotlib.pyplot as plt
+    plt.ion()
 
     X_s = model.x_s
     plt.figure(figsize=(16, 16))
