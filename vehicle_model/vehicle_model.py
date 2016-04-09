@@ -30,7 +30,7 @@ class ExactTracker(object):
     def __init__(self, L):
         self.L = L
 
-    def simulate(self, X, k_path, dist_along_path, v_path, time):
+    def simulate(self, X, k_path, dist_along_path):
         ds = np.diff(dist_along_path)
 
         theta_s = np.zeros(k_path.shape)
@@ -63,15 +63,21 @@ class VehicleModel(object):
 
         # Let's just give the vehicle a constant velocity
         self.vel = 1.0
-
         self.x = x0
-        self.x_s = np.zeros(shape=(3, 1))
-        self.x_s[:, 0] = self.x
 
         if model_type == VehicleModel.EXACT:
             self.model = ExactTracker(L)
         else:
             raise RuntimeError("Passed a model type not recognized")
+
+    def simulate_over_length(self, k_path, k_spacing):
+        dist_along_path = np.cumsum(k_spacing)
+        dist_along_path = np.insert(dist_along_path, 0, 0)
+
+        x_sim = self.model.simulate(self.x, k_path, dist_along_path)
+
+        x_sim = np.hstack((self.x.reshape(3, 1), x_sim))
+        return x_sim
 
     def simulate(self, k_path, k_spacing, time):
         assert type(k_path) == np.ndarray
@@ -105,10 +111,10 @@ class VehicleModel(object):
 
         v_path = np.ones(k_path_trunc.shape) * self.vel
 
-        x_s_new = self.model.simulate(self.x, k_path_trunc, dist_along_path_trunc, v_path, time)
+        x_sim = self.model.simulate(self.x, k_path_trunc, dist_along_path_trunc)
+        x_sim = np.hstack((self.x.reshape(3, 1), x_sim))
 
-        self.x = x_s_new[:, -1]
-        self.x_s = np.hstack((self.x_s, x_s_new))
+        return x_sim
 
 
 if __name__ == '__main__':
@@ -124,6 +130,7 @@ if __name__ == '__main__':
     N = 50
     dist = np.pi * 2.0
     X = np.asarray([0, 0, 0])
+
     k_path = np.sin(np.linspace(0, np.pi * 4, num=N))
     k_spacing = np.ones(shape=(N - 1,), dtype=np.float64) * dist / (N - 1)
     dist_along_path = np.cumsum(k_spacing)
@@ -134,15 +141,33 @@ if __name__ == '__main__':
 
     model = VehicleModel(X, 1.0, VehicleModel.EXACT)
 
-    model.simulate(k_path, k_spacing, 5.0)
-
+    X_s = model.simulate(k_path, k_spacing, 5.0)
     import matplotlib.pyplot as plt
 
     plt.ion()
 
-    X_s = model.x_s
     plt.figure(figsize=(16, 16))
     plt.plot(X_s[0, :], X_s[1, :])
+    plt.title('Path plot of curvature function')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.show()
+
+    plt.figure(figsize=(16, 16))
+    plt.plot(dist_along_path, k_path)
+    plt.title('Curvature command')
+    plt.xlabel('Distance')
+    plt.ylabel('Curvature')
+    plt.show()
+
+    model.x = X
+    Y_s = model.simulate_over_length(k_path, k_spacing)
+    import matplotlib.pyplot as plt
+
+    plt.ion()
+
+    plt.figure(figsize=(16, 16))
+    plt.plot(Y_s[0, :], Y_s[1, :])
     plt.title('Path plot of curvature function')
     plt.xlabel('x')
     plt.ylabel('y')
