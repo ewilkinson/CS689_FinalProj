@@ -9,35 +9,49 @@ X = np.asarray([0, 0, 0])
 veh_model = VehicleModel(X, 1.0, VehicleModel.EXACT)
 
 
-# Let's see if we can get all points to line up in direction
-
-global_desired_theta = 0.392
-
-
 # Create a psi function. This integrates over length L, contains N gaussian kernels
 # and has an initial sigma value of whatever is specified in sigint
 L = 50
 desired_spacing = 0.5
 N = 50
 sigint = 3.0
-psi = CurvatureExp(N=N, L=L, sigint=sigint)
+initial_weights_zero = True
+psi = CurvatureExp(N=N, L=L, sigint=sigint, zero_weights=initial_weights_zero)
 
 
+# Parameters related to optimization
 penalty_args = {'desired_spacing': desired_spacing,
-                'global_desired_theta': global_desired_theta}
+                'global_desired_theta': 0.392}
 
-dir_alpha = 1.0
-l1_weights_alpha = 1.0
-l2_weights_alpha = 200.0
+# 200 is a good value for l2 weights
+penalty_weights = {GLOBAL_DIR_PENALTY: 1.0,
+                   L1_WEIGHTS: 1.0,
+                   L2_WEIGHTS: 0.0}
+penalty_funcs = {GLOBAL_DIR_PENALTY: dir_penalty_func,
+                 L1_WEIGHTS: l1_penalty_weights,
+                 L2_WEIGHTS: l2_penalty_weights}
 
-def min_func(x):
+
+# check that every penalty weight has an associated penalty func
+weight_set = set(penalty_weights.keys())
+func_set = set(penalty_funcs.keys())
+assert len(weight_set.intersection(func_set)) == len(weight_set)
+
+
+def min_func(x, penalty_weights, penalty_args):
     # TODO eventually I will want to unpack the parameters differently if they start
     # changing mu and sigma values as well
     psi.weights = x
-    dir_cost = dir_penalty_func(psi, veh_model, penalty_args)
-    l1_weights_cost = l1_penalty_weights(psi, veh_model, penalty_args)
 
-    total_cost = dir_alpha * dir_cost + l1_weights_alpha * l1_weights_cost
+    total_cost = 0
+
+    # for each weight that is non zero evaluate the penalty and add to total cost
+    for key in penalty_weights.keys():
+        if penalty_weights[GLOBAL_DIR_PENALTY] != 0:
+            penalty_func = penalty_funcs[key]
+            penalty_weight = penalty_weights[key]
+
+            total_cost += penalty_weight * penalty_func(psi, veh_model, penalty_args)
 
     return total_cost
 
@@ -45,7 +59,8 @@ def min_func(x):
 x0 = np.copy(psi.weights)
 
 # res = opt.minimize(min_func, x0, method='Nelder-Mead', tol=1e-6, options={'maxfev': 8000, 'maxiter': 8000})
-res = opt.minimize(min_func, x0, method='L-BFGS-B', tol=1e-6, options={'disp': True})
+res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args), method='L-BFGS-B', tol=1e-6,
+                   options={'disp': True})
 
 print 'Optimization result : ', res.success
 print 'Number of evaluations : ', res.nfev

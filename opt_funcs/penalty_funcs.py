@@ -1,5 +1,10 @@
 import numpy as np
 
+# All penalty function names
+GLOBAL_DIR_PENALTY = 'global_dir'
+L2_WEIGHTS = 'l2_weights'
+L1_WEIGHTS = 'l1_weights'
+
 
 def cosine_similarity(a, b):
     '''
@@ -16,7 +21,7 @@ def cosine_similarity(a, b):
 def dir_penalty_func(psi, veh_model, args):
     '''
     Adds a penalty for every point calculated that is not in the direction of the args
-    argument 'global_desired_theta'
+    argument 'global_desired_theta'. It basically gets the path to go in one direction.
 
     :param psi: Curvature function
     :param veh_model: Vehicle model
