@@ -44,27 +44,35 @@ psi = CurvatureExp(N=N,
 
 
 # Parameters related to optimization
+t_points = np.asarray([[10, 5, 5],
+                       [30, 15, 5]], dtype=np.float64)
 penalty_args = {'desired_spacing': desired_spacing,
-                'global_desired_theta': 0.392,
-                'should_opt_sigma': False}
+                'global_desired_theta': np.pi / 8,
+                'last_desired_theta': np.pi / 4,
+                'should_opt_sigma': False,
+                'target_points': t_points}
 
 # 200 is a good value for l2 weights
-penalty_weights = {GLOBAL_DIR_PENALTY: 1.0,
+penalty_weights = {GLOBAL_DIR_PENALTY: 0.0,
+                   LAST_DIR_PENALTY: 1.0,
                    L1_WEIGHTS: 1.0,
                    L2_WEIGHTS: 0.0,
                    L1_CURVATURE: 0.0,
                    L2_CURVATURE: 0.0,
                    L2_DK: 100.0,
-                   L1_DK: 0.0}
-penalty_funcs = {GLOBAL_DIR_PENALTY: dir_penalty_func,
+                   L1_DK: 0.0,
+                   TARGET_POINTS_PENALTY: 1.0}
+penalty_funcs = {GLOBAL_DIR_PENALTY: global_dir_penalty_func,
+                 LAST_DIR_PENALTY: last_dir_penalty_func,
                  L1_WEIGHTS: l1_penalty_weights,
                  L2_WEIGHTS: l2_penalty_weights,
                  L1_CURVATURE: l1_penalty_curvature,
                  L2_CURVATURE: l2_penalty_curvature,
                  L2_DK: l2_penalty_dk,
-                 L1_DK: l1_penalty_dk}
+                 L1_DK: l1_penalty_dk,
+                 TARGET_POINTS_PENALTY: target_points_penalty}
 
-cost_trace = CostTrace(penalty_weights, SAMPLE_RATE=100)
+cost_trace = CostTrace(penalty_weights, SAMPLE_RATE=10)
 
 # check that every penalty weight has an associated penalty func
 weight_set = set(penalty_weights.keys())
