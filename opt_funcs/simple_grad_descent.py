@@ -2,7 +2,7 @@ from scipy.optimize import OptimizeResult
 import numpy as np
 
 
-def simple_grad(fun, x0, args=(), maxfev=None, stepsize=0.1,
+def simple_grad(fun, x0, args=(), maxfev=None, stepsize=0.01,
                 maxiter=100, callback=None, **options):
     '''
     Simple gradient method taken from the scipy minimize documentation.

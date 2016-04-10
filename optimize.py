@@ -81,7 +81,7 @@ x0 = np.copy(psi.weights)
 # res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
 #                    options={'disp': True})
 res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method=simple_grad, tol=1e-6,
-                   options={'disp': True})
+                   options={'disp': True, 'stepsize': 0.001})
 
 print 'Optimization result : ', res.success
 print 'Number of evaluations : ', res.nfev
