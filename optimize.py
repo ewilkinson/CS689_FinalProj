@@ -1,4 +1,3 @@
-import numpy as np
 import scipy.optimize as opt
 from curvature import CurvatureExp
 from vehicle_model.vehicle_model import VehicleModel
@@ -6,6 +5,25 @@ from vehicle_model.vehicle_model import VehicleModel
 from opt_funcs.penalty_funcs import *
 from opt_funcs.cost_trace import CostTrace
 from opt_funcs.simple_grad_descent import simple_grad
+
+
+def map_x_to_psi(psi, x, should_opt_sigmas):
+    if should_opt_sigmas:
+        weights_size = psi.weights.size
+        psi.weights = x[:weights_size]
+        psi.sigmas = x[weights_size:]
+    else:
+        psi.weights = x
+
+
+def create_x_from_psi(psi, should_opt_sigmas):
+    x0 = np.copy(psi.weights)
+
+    if should_opt_sigmas:
+        x0 = np.append(x0, np.copy(psi.sigmas))
+
+    return x0
+
 
 # Create a vehicle at the origin 0,0,0
 veh_model = VehicleModel(np.asarray([0, 0, 0]), 1.0, VehicleModel.EXACT)
@@ -15,7 +33,7 @@ veh_model = VehicleModel(np.asarray([0, 0, 0]), 1.0, VehicleModel.EXACT)
 # and has an initial sigma value of whatever is specified in sigint
 L = 50
 desired_spacing = 0.5
-N = 50
+N = 25
 sigint = 3.0
 initial_weights_zero = True
 psi = CurvatureExp(N=N,
@@ -27,7 +45,8 @@ psi = CurvatureExp(N=N,
 
 # Parameters related to optimization
 penalty_args = {'desired_spacing': desired_spacing,
-                'global_desired_theta': 0.392}
+                'global_desired_theta': 0.392,
+                'should_opt_sigma': False}
 
 # 200 is a good value for l2 weights
 penalty_weights = {GLOBAL_DIR_PENALTY: 1.0,
@@ -45,19 +64,19 @@ penalty_funcs = {GLOBAL_DIR_PENALTY: dir_penalty_func,
                  L2_DK: l2_penalty_dk,
                  L1_DK: l1_penalty_dk}
 
+cost_trace = CostTrace(penalty_weights, SAMPLE_RATE=100)
 
 # check that every penalty weight has an associated penalty func
 weight_set = set(penalty_weights.keys())
 func_set = set(penalty_funcs.keys())
 assert len(weight_set.intersection(func_set)) == len(weight_set)
 
-cost_trace = CostTrace(penalty_weights, SAMPLE_RATE=100)
-
 
 def min_func(x, penalty_weights, penalty_args, cost_trace):
     # TODO eventually I will want to unpack the parameters differently if they start
     # changing mu and sigma values as well
-    psi.weights = x
+
+    map_x_to_psi(psi, x, penalty_args['should_opt_sigma'])
 
     total_cost = 0
 
@@ -75,13 +94,13 @@ def min_func(x, penalty_weights, penalty_args, cost_trace):
     return total_cost
 
 
-x0 = np.copy(psi.weights)
+x0 = create_x_from_psi(psi, penalty_args['should_opt_sigma'])
 
 # res = opt.minimize(min_func, x0, method='Nelder-Mead', tol=1e-6, options={'maxfev': 8000, 'maxiter': 8000})
-# res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
-#                    options={'disp': True})
-res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method=simple_grad, tol=1e-6,
-                   options={'disp': True, 'stepsize': 0.001})
+res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
+                   options={'disp': True})
+# res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method=simple_grad, tol=1e-6,
+#                    options={'disp': True, 'stepsize': 0.001})
 
 print 'Optimization result : ', res.success
 print 'Number of evaluations : ', res.nfev
@@ -92,7 +111,8 @@ cost_trace.plot_trace()
 # PLOT THE RESULTS
 import matplotlib.pyplot as plt
 
-psi.weights = x0
+map_x_to_psi(psi, x0, penalty_args['should_opt_sigma'])
+
 ks, dists = psi.eval_over_length(desired_spacing)
 Y_s = veh_model.simulate_over_length(ks, np.diff(dists))
 
@@ -117,7 +137,8 @@ plt.show()
 
 
 # PLOT NEW SOLUTION X
-psi.weights = res.x
+map_x_to_psi(psi, res.x, penalty_args['should_opt_sigma'])
+
 ks, dists = psi.eval_over_length(desired_spacing)
 Y_s = veh_model.simulate_over_length(ks, np.diff(dists))
 
@@ -139,3 +160,5 @@ for ax in [ax1, ax2]:
         item.set_fontsize(20)
 
 plt.show()
+
+psi.plot_exp_components()

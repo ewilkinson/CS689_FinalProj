@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class CurvatureExp(object):
     def __init__(self, N, L, sigint, use_cache=False, zero_weights=False):
@@ -61,6 +61,35 @@ class CurvatureExp(object):
         self.cached_dk, self.cached_dk_dists = np.asarray(ks, dtype=np.float64), dists
         return self.cached_dk, self.cached_dk_dists
 
+    def _eval_individual_components(self, x):
+        return self.weights * np.exp(-np.square(x - self.mus) / (2 * np.square(self.sigmas)))
+
+    def plot_exp_components(self):
+        '''
+        Plots the individual exponential components
+        '''
+        fig = plt.figure(figsize=(16, 16))
+        ax = fig.add_subplot(111)
+
+        xs = np.linspace(0, self.L, 1e3, endpoint=True)
+
+        ys = np.zeros(shape=(xs.size, self.weights.size))
+        for i, x in enumerate(xs):
+            ys[i, :] = self._eval_individual_components(x)
+
+        for j in range(ys.shape[1]):
+            ax.plot(xs, ys[:,j])
+
+        ax.set_title('Curvature Exp Component Plot')
+        ax.set_xlabel('Distance')
+        ax.set_ylabel('Curvature')
+
+        for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+                         ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(20)
+
+        fig.show()
+
 
 if __name__ == '__main__':
     L = 50
@@ -108,3 +137,5 @@ if __name__ == '__main__':
     plt.ylabel('y')
     plt.ylim([-25, 25])
     plt.show()
+
+    psi.plot_exp_components()
