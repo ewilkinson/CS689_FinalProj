@@ -4,6 +4,10 @@ import numpy as np
 GLOBAL_DIR_PENALTY = 'global_dir'
 L2_WEIGHTS = 'l2_weights'
 L1_WEIGHTS = 'l1_weights'
+L2_CURVATURE = 'l2_curvature'
+L1_CURVATURE = 'l1_curvature'
+L2_DK = 'l2_dk'
+L1_DK = 'l1_dk'
 
 
 def cosine_similarity(a, b):
@@ -57,3 +61,55 @@ def l1_penalty_weights(psi, veh_model, args):
     '''
 
     return np.sum(np.abs(psi.weights))
+
+
+def l2_penalty_curvature(psi, veh_model, args):
+    '''
+    Adds a penalty on the l2 of the curvature
+
+    :param psi: Curvature function
+    :param veh_model: Vehicle model
+    :param args: Penalty args
+    :return: cost
+    '''
+    ks, dists = psi.eval_over_length(args['desired_spacing'])
+    return 0.5 * np.sum(np.square(ks))
+
+
+def l1_penalty_curvature(psi, veh_model, args):
+    '''
+    Adds a penalty on the l1 of the curvature
+
+    :param psi: Curvature function
+    :param veh_model: Vehicle model
+    :param args: Penalty args
+    :return: cost
+    '''
+    ks, dists = psi.eval_over_length(args['desired_spacing'])
+    return np.sum(np.abs(ks))
+
+
+def l2_penalty_dk(psi, veh_model, args):
+    '''
+    Adds a penalty on the l2 of the rate of change of curvature
+
+    :param psi: Curvature function
+    :param veh_model: Vehicle model
+    :param args: Penalty args
+    :return: cost
+    '''
+    dks, dists = psi.eval_derv_over_length(args['desired_spacing'])
+    return 0.5 * np.sum(np.square(dks))
+
+
+def l1_penalty_dk(psi, veh_model, args):
+    '''
+    Adds a penalty on the l1 of the rate of change of curvature
+
+    :param psi: Curvature function
+    :param veh_model: Vehicle model
+    :param args: Penalty args
+    :return: cost
+    '''
+    dks, dists = psi.eval_derv_over_length(args['desired_spacing'])
+    return np.sum(np.abs(dks))

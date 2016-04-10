@@ -2,7 +2,7 @@ import numpy as np
 
 
 class CurvatureExp(object):
-    def __init__(self, N, L, sigint, zero_weights=False):
+    def __init__(self, N, L, sigint, use_cache=False, zero_weights=False):
         self.N = N
         self.L = L
 
@@ -14,6 +14,18 @@ class CurvatureExp(object):
         if zero_weights:
             self.weights = np.zeros(self.weights.shape, dtype=self.weights.dtype)
 
+        self.use_cache = use_cache
+        self.cached_k = None
+        self.cached_dk = None
+        self.cached_k_dists = None
+        self.cached_dk_dists = None
+
+    def clear_cache(self):
+        self.cached_k = None
+        self.cached_k_dists = None
+        self.cached_dk = None
+        self.cached_dk_dists = None
+
     def eval(self, x):
         return np.sum(self.weights * np.exp(-np.square(x - self.mus) / (2 * np.square(self.sigmas))))
 
@@ -22,7 +34,10 @@ class CurvatureExp(object):
         diff_mu = x - self.mus
         return np.sum(self.weights * -diff_mu / (2 * sig_square) * np.exp(-np.square(diff_mu) / (2 * sig_square)))
 
-    def eval_over_length(self, desired_spacing = 0.5):
+    def eval_over_length(self, desired_spacing=0.5):
+        if self.use_cache and self.cached_k is not None:
+            return self.cached_k, self.cached_k_dists
+
         num_points = int(self.L / desired_spacing)
         dists = np.linspace(0, self.L, num=num_points, endpoint=True)
 
@@ -32,7 +47,10 @@ class CurvatureExp(object):
 
         return np.asarray(ks), dists
 
-    def eval_derv_over_length(self, desired_spacing = 0.5):
+    def eval_derv_over_length(self, desired_spacing=0.5):
+        if self.use_cache and self.cached_dk is not None:
+            return self.cached_dk, self.cached_dk_dists
+
         num_points = int(self.L / desired_spacing)
         dists = np.linspace(0, self.L, num=num_points, endpoint=True)
 
@@ -40,7 +58,8 @@ class CurvatureExp(object):
         for dist in dists:
             ks.append(self.eval_derv(dist))
 
-        return np.asarray(ks, dtype=np.float64), dists
+        self.cached_dk, self.cached_dk_dists = np.asarray(ks, dtype=np.float64), dists
+        return self.cached_dk, self.cached_dk_dists
 
 
 if __name__ == '__main__':
@@ -56,14 +75,14 @@ if __name__ == '__main__':
     dks, dists = psi.eval_derv_over_length(0.5)
 
     import matplotlib.pyplot as plt
-    plt.ion()
 
+    plt.ion()
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 14), sharex=True)
     ax1.plot(dists, ks)
     ax1.set_title('Random Curvature Gauss Basis Function')
     ax1.set_xlabel('Distance')
-    ax1.set_ylabel('Curvature')
+    ax1.set_ylabel('Cusvature')
 
     ax2.plot(dists, dks)
     ax2.set_title('Random Curvature Derivative')
@@ -87,5 +106,5 @@ if __name__ == '__main__':
     plt.title('Path plot of curvature function')
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.ylim([-25,25])
+    plt.ylim([-25, 25])
     plt.show()

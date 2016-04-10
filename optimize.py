@@ -3,10 +3,10 @@ import numpy as np
 from curvature import CurvatureExp
 from vehicle_model.vehicle_model import VehicleModel
 from opt_funcs.penalty_funcs import *
+from opt_funcs.cost_trace import CostTrace
 
 # Create a vehicle at the origin 0,0,0
-X = np.asarray([0, 0, 0])
-veh_model = VehicleModel(X, 1.0, VehicleModel.EXACT)
+veh_model = VehicleModel(np.asarray([0, 0, 0]), 1.0, VehicleModel.EXACT)
 
 
 # Create a psi function. This integrates over length L, contains N gaussian kernels
@@ -15,8 +15,12 @@ L = 50
 desired_spacing = 0.5
 N = 50
 sigint = 3.0
-initial_weights_zero = True
-psi = CurvatureExp(N=N, L=L, sigint=sigint, zero_weights=initial_weights_zero)
+initial_weights_zero = False
+psi = CurvatureExp(N=N,
+                   L=L,
+                   sigint=sigint,
+                   use_cache=True,
+                   zero_weights=initial_weights_zero)
 
 
 # Parameters related to optimization
@@ -26,10 +30,18 @@ penalty_args = {'desired_spacing': desired_spacing,
 # 200 is a good value for l2 weights
 penalty_weights = {GLOBAL_DIR_PENALTY: 1.0,
                    L1_WEIGHTS: 1.0,
-                   L2_WEIGHTS: 0.0}
+                   L2_WEIGHTS: 0.0,
+                   L1_CURVATURE: 0.0,
+                   L2_CURVATURE: 0.0,
+                   L2_DK: 100.0,
+                   L1_DK: 0.0}
 penalty_funcs = {GLOBAL_DIR_PENALTY: dir_penalty_func,
                  L1_WEIGHTS: l1_penalty_weights,
-                 L2_WEIGHTS: l2_penalty_weights}
+                 L2_WEIGHTS: l2_penalty_weights,
+                 L1_CURVATURE: l1_penalty_curvature,
+                 L2_CURVATURE: l2_penalty_curvature,
+                 L2_DK: l2_penalty_dk,
+                 L1_DK: l1_penalty_dk}
 
 
 # check that every penalty weight has an associated penalty func
@@ -37,8 +49,10 @@ weight_set = set(penalty_weights.keys())
 func_set = set(penalty_funcs.keys())
 assert len(weight_set.intersection(func_set)) == len(weight_set)
 
+cost_trace = CostTrace(penalty_weights, SAMPLE_RATE=100)
 
-def min_func(x, penalty_weights, penalty_args):
+
+def min_func(x, penalty_weights, penalty_args, cost_trace):
     # TODO eventually I will want to unpack the parameters differently if they start
     # changing mu and sigma values as well
     psi.weights = x
@@ -47,11 +61,14 @@ def min_func(x, penalty_weights, penalty_args):
 
     # for each weight that is non zero evaluate the penalty and add to total cost
     for key in penalty_weights.keys():
-        if penalty_weights[GLOBAL_DIR_PENALTY] != 0:
+        if penalty_weights[key] != 0:
             penalty_func = penalty_funcs[key]
             penalty_weight = penalty_weights[key]
+            p_cost = penalty_weight * penalty_func(psi, veh_model, penalty_args)
 
-            total_cost += penalty_weight * penalty_func(psi, veh_model, penalty_args)
+            cost_trace.add_penalty(key, p_cost)
+
+            total_cost += p_cost
 
     return total_cost
 
@@ -59,13 +76,14 @@ def min_func(x, penalty_weights, penalty_args):
 x0 = np.copy(psi.weights)
 
 # res = opt.minimize(min_func, x0, method='Nelder-Mead', tol=1e-6, options={'maxfev': 8000, 'maxiter': 8000})
-res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args), method='L-BFGS-B', tol=1e-6,
+res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
                    options={'disp': True})
 
 print 'Optimization result : ', res.success
 print 'Number of evaluations : ', res.nfev
 print 'Minimum value of f : ', res.fun
 
+cost_trace.plot_trace()
 
 # PLOT THE RESULTS
 import matplotlib.pyplot as plt
