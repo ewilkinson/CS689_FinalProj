@@ -1,9 +1,11 @@
-import scipy.optimize as opt
 import numpy as np
+import scipy.optimize as opt
 from curvature import CurvatureExp
 from vehicle_model.vehicle_model import VehicleModel
+
 from opt_funcs.penalty_funcs import *
 from opt_funcs.cost_trace import CostTrace
+from opt_funcs.simple_grad_descent import simple_grad
 
 # Create a vehicle at the origin 0,0,0
 veh_model = VehicleModel(np.asarray([0, 0, 0]), 1.0, VehicleModel.EXACT)
@@ -15,7 +17,7 @@ L = 50
 desired_spacing = 0.5
 N = 50
 sigint = 3.0
-initial_weights_zero = False
+initial_weights_zero = True
 psi = CurvatureExp(N=N,
                    L=L,
                    sigint=sigint,
@@ -76,7 +78,9 @@ def min_func(x, penalty_weights, penalty_args, cost_trace):
 x0 = np.copy(psi.weights)
 
 # res = opt.minimize(min_func, x0, method='Nelder-Mead', tol=1e-6, options={'maxfev': 8000, 'maxiter': 8000})
-res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
+# res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
+#                    options={'disp': True})
+res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method=simple_grad, tol=1e-6,
                    options={'disp': True})
 
 print 'Optimization result : ', res.success
