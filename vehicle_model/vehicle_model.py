@@ -17,7 +17,7 @@ class ExactTracker(object):
         theta_s[0] = X[2]
 
         for i in range(len(ds)):
-            theta_s[i + 1] = theta_s[i] + self.L * k_path[i] * ds[i]
+            theta_s[i + 1] = theta_s[i] + np.arctan(self.L * k_path[i]) * ds[i]
             x_s[i + 1] = x_s[i] + np.cos(theta_s[i]) * ds[i]
             y_s[i + 1] = y_s[i] + np.sin(theta_s[i]) * ds[i]
 
