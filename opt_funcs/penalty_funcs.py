@@ -149,13 +149,11 @@ def target_points_penalty(psi, veh_model, args):
     ks, dists = psi.eval_over_length(args['desired_spacing'])
     x_s = veh_model.simulate_over_length(ks, np.diff(dists))
 
-    x_interp = LinearInterpolator(x_s[0, :], dists)
-    y_interp = LinearInterpolator(x_s[1, :], dists)
-
     cost = 0
     for t_p in t_points:
-        x_prime = np.asarray([x_interp(t_p[0]), y_interp(t_p[1])])
-        cost += np.sum(np.square(x_prime - t_p[1:]))
+        point_dists = np.sum(np.square(x_s[:2, :].transpose() - t_p), axis=1)
+
+        cost += point_dists.min()
 
     return 0.5 * cost
 

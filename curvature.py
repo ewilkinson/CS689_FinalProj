@@ -111,7 +111,7 @@ if __name__ == '__main__':
     ax1.plot(dists, ks)
     ax1.set_title('Random Curvature Gauss Basis Function')
     ax1.set_xlabel('Distance')
-    ax1.set_ylabel('Cusvature')
+    ax1.set_ylabel('Curvature')
 
     ax2.plot(dists, dks)
     ax2.set_title('Random Curvature Derivative')
