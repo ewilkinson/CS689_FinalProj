@@ -1,29 +1,16 @@
 import scipy.optimize as opt
+import matplotlib.pyplot as plt
+
 from curvature import CurvatureExp
 from vehicle_model.vehicle_model import VehicleModel
 
+from utility.plot_weight_costs import plot_weight_costs
+from utility.convertors import *
 from opt_funcs.penalty_funcs import *
 from opt_funcs.cost_trace import CostTrace
 from opt_funcs.simple_grad_descent import simple_grad
-
-
-def map_x_to_psi(psi, x, should_opt_sigmas):
-    if should_opt_sigmas:
-        weights_size = psi.weights.size
-        psi.weights = x[:weights_size]
-        psi.sigmas = x[weights_size:]
-    else:
-        psi.weights = x
-
-
-def create_x_from_psi(psi, should_opt_sigmas):
-    x0 = np.copy(psi.weights)
-
-    if should_opt_sigmas:
-        x0 = np.append(x0, np.copy(psi.sigmas))
-
-    return x0
-
+from opt_funcs.adagrad import adagrad
+from opt_funcs.adadelta import adadelta
 
 # Create a vehicle at the origin 0,0,0
 veh_model = VehicleModel(np.asarray([0, 0, 0]), 1.0, VehicleModel.EXACT)
@@ -46,7 +33,7 @@ psi = CurvatureExp(N=N,
 # Parameters related to optimization
 t_points = np.asarray([[10, 5],
                        [15, 5],
-                       [25, 10]], dtype=np.float64)
+                       [25, -10]], dtype=np.float64)
 penalty_args = {'desired_spacing': desired_spacing,
                 'global_desired_theta': np.pi / 8,
                 'last_desired_theta': 0.0,
@@ -82,9 +69,6 @@ assert len(weight_set.intersection(func_set)) == len(weight_set)
 
 
 def min_func(x, penalty_weights, penalty_args, cost_trace):
-    # TODO eventually I will want to unpack the parameters differently if they start
-    # changing mu and sigma values as well
-
     map_x_to_psi(psi, x, penalty_args['should_opt_sigma'])
 
     total_cost = 0
@@ -100,16 +84,38 @@ def min_func(x, penalty_weights, penalty_args, cost_trace):
 
             total_cost += p_cost
 
-    return total_cost
+    cost_trace.inc_counter()
 
+    return total_cost
 
 x0 = create_x_from_psi(psi, penalty_args['should_opt_sigma'])
 
-# res = opt.minimize(min_func, x0, method='Nelder-Mead', tol=1e-6, options={'maxfev': 8000, 'maxiter': 8000})
-res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method='L-BFGS-B', tol=1e-6,
+# res = opt.minimize(min_func, x0,
+#                    method='COBYLA',
+#                    args=(penalty_weights, penalty_args, cost_trace),
+#                    tol=1e-4,
+#                    options={'maxfev': 8000, 'maxiter': 8000})
+res = opt.minimize(min_func, x0,
+                   args=(penalty_weights, penalty_args, cost_trace),
+                   method='L-BFGS-B',
+                   tol=1e-4,
                    options={'disp': True})
-# res = opt.minimize(min_func, x0, args=(penalty_weights, penalty_args, cost_trace), method=simple_grad, tol=1e-6,
+# res = opt.minimize(min_func, x0,
+#                    args=(penalty_weights, penalty_args, cost_trace),
+#                    method=simple_grad,
+#                    tol=1e-4,
 #                    options={'disp': True, 'stepsize': 0.001})
+# res = opt.minimize(min_func, x0,
+#                    args=(penalty_weights, penalty_args, cost_trace),
+#                    method=adagrad,
+#                    tol=1e-4,
+#                    options={'maxiter': 10000, 'eta': 0.005})
+
+# res = opt.minimize(min_func, x0,
+#                    args=(penalty_weights, penalty_args, cost_trace),
+#                    method=adadelta,
+#                    tol=1e-4,
+#                    options={'maxiter': 10000, 'rho_dx': 0.8, 'rho_g': 0.8})
 
 print 'Optimization result : ', res.success
 print 'Number of evaluations : ', res.nfev
@@ -118,8 +124,6 @@ print 'Minimum value of f : ', res.fun
 cost_trace.plot_trace()
 
 # PLOT THE RESULTS
-import matplotlib.pyplot as plt
-
 plt.ion()
 
 map_x_to_psi(psi, x0, penalty_args['should_opt_sigma'])
@@ -177,3 +181,5 @@ for ax in [ax1, ax2]:
 plt.show()
 
 psi.plot_exp_components()
+
+# plot_weight_costs(psi, veh_model, penalty_args, [0, 10, 20])

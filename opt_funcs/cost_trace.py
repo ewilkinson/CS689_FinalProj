@@ -38,7 +38,6 @@ class CostTrace(object):
         fig.show()
 
     def add_penalty(self, key, p_cost):
-        self.cost_sample_counter += 1
         if self.cost_sample_counter % self.cost_sample_rate == 0:
             self.trace[key].append(p_cost)
             self.cost_sample_counter = 0
@@ -46,3 +45,6 @@ class CostTrace(object):
     def clear_trace(self):
         for key in self.trace.keys():
             self.trace[key] = []
+
+    def inc_counter(self):
+        self.cost_sample_counter += 1

@@ -65,7 +65,7 @@ def l2_penalty_weights(psi, veh_model, args):
     :param args: Penalty args
     :return: cost
     '''
-    return 0.5 * np.sum(np.square(psi.weights))
+    return 0.5 * np.sum(np.square(psi.weights)) / psi.weights.size
 
 
 def l1_penalty_weights(psi, veh_model, args):
@@ -78,7 +78,7 @@ def l1_penalty_weights(psi, veh_model, args):
     :return: cost
     '''
 
-    return np.sum(np.abs(psi.weights))
+    return np.sum(np.abs(psi.weights)) / psi.weights.size
 
 
 def l2_penalty_curvature(psi, veh_model, args):
@@ -155,6 +155,6 @@ def target_points_penalty(psi, veh_model, args):
 
         cost += point_dists.min()
 
-    return 0.5 * cost
+    return 0.5 * cost / t_points.shape[0]
 
 
